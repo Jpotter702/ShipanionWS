@@ -8,13 +8,20 @@ import uuid
 import logging
 from datetime import timedelta
 
+# Import settings
+from backend.settings import (
+    ALLOWED_ORIGINS,
+    SECRET_KEY,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    TEST_TOKEN,
+    USE_INTERNAL
+)
+
 # Import security utilities
 from backend.security import (
     authenticate_user,
     create_access_token,
-    verify_token,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-    TEST_TOKEN
+    verify_token
 )
 
 # Import message handlers
@@ -27,9 +34,12 @@ from backend.session import create_session, get_session, update_session_state
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Log the current settings
+logger.info(f"Starting server with USE_INTERNAL={USE_INTERNAL}")
+
 app = FastAPI()
 
-origins = ["*"]
+origins = ALLOWED_ORIGINS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

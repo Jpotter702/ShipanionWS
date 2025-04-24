@@ -30,6 +30,7 @@ async def handle_rate_request(message: Dict[str, Any], user_info: Dict[str, Any]
         A response message to be sent back through the WebSocket
     """
     logger.info(f"Handling rate request from user: {user_info.get('username')}")
+    request_id = message.get("requestId", str(uuid.uuid4()))
 
     try:
         # Extract rate request data from the message payload
@@ -39,6 +40,7 @@ async def handle_rate_request(message: Dict[str, Any], user_info: Dict[str, Any]
         required_fields = ["origin_zip", "destination_zip", "weight"]
         for field in required_fields:
             if field not in rate_request:
+                logger.warning(f"Missing required field: {field} in rate request")
                 return {
                     "type": "error",
                     "payload": {
@@ -46,33 +48,58 @@ async def handle_rate_request(message: Dict[str, Any], user_info: Dict[str, Any]
                         "original_request": message
                     },
                     "timestamp": time.time(),
-                    "requestId": str(uuid.uuid4())
-                }
+                    "requestId": request_id,
+                    "user": user_info.get("username")
+                }, None
 
-        # Forward the request to the ShipVox API
-        rate_response = await shipvox_client.get_rates(rate_request)
+        try:
+            # Forward the request to the ShipVox API with a 10-second timeout
+            logger.info(f"Sending rate request to ShipVox API for request ID: {request_id}")
+            rate_response = await shipvox_client.get_rates(rate_request, timeout_seconds=10.0)
 
-        # Create the response
-        response = {
-            "type": "quote_ready",
-            "payload": rate_response,
-            "timestamp": time.time(),
-            "requestId": str(uuid.uuid4()),
-            "user": user_info.get("username")
-        }
+            # Create the response
+            response = {
+                "type": "quote_ready",
+                "payload": rate_response,
+                "timestamp": time.time(),
+                "requestId": request_id,
+                "user": user_info.get("username")
+            }
 
-        # No contextual update for direct rate requests
-        return response, None
+            # No contextual update for direct rate requests
+            logger.info(f"Successfully processed rate request for request ID: {request_id}")
+            return response, None
+
+        except Exception as api_error:
+            # Handle API-specific errors (non-200 responses, timeouts, etc.)
+            error_message = str(api_error)
+            logger.error(f"API error for request ID {request_id}: {error_message}")
+
+            error_response = {
+                "type": "error",
+                "payload": {
+                    "message": f"Failed to get shipping rates: {error_message}",
+                    "original_request": message,
+                    "is_error": True
+                },
+                "timestamp": time.time(),
+                "requestId": request_id,
+                "user": user_info.get("username")
+            }
+            return error_response, None
+
     except Exception as e:
-        logger.error(f"Error handling rate request: {str(e)}")
+        # Handle any other unexpected errors
+        logger.error(f"Unexpected error handling rate request for request ID {request_id}: {str(e)}")
         error_response = {
             "type": "error",
             "payload": {
                 "message": f"Error processing rate request: {str(e)}",
-                "original_request": message
+                "original_request": message,
+                "is_error": True
             },
             "timestamp": time.time(),
-            "requestId": str(uuid.uuid4()),
+            "requestId": request_id,
             "user": user_info.get("username")
         }
         return error_response, None

@@ -30,6 +30,7 @@ async def handle_get_shipping_quotes(tool_call: Dict[str, Any], user_info: Dict[
         A client_tool_result message to be sent back through the WebSocket
     """
     logger.info(f"Handling get_shipping_quotes from user: {user_info.get('username')}")
+    tool_call_id = tool_call.get("tool_call_id", "unknown")
 
     try:
         # Extract parameters from the tool call
@@ -48,42 +49,61 @@ async def handle_get_shipping_quotes(tool_call: Dict[str, Any], user_info: Dict[
         required_fields = ["origin_zip", "destination_zip", "weight"]
         for field in required_fields:
             if not rate_request.get(field):
+                logger.warning(f"Missing required parameter: {field} for tool call: {tool_call_id}")
                 return create_tool_error_response(
-                    tool_call_id=tool_call.get("tool_call_id"),
+                    tool_call_id=tool_call_id,
                     error_message=f"Missing required parameter: {field}",
                     original_request=tool_call
-                )
+                ), None
 
-        # Forward the request to the ShipVox API
-        rate_response = await shipvox_client.get_rates(rate_request)
+        try:
+            # Forward the request to the ShipVox API with a 10-second timeout
+            logger.info(f"Sending rate request to ShipVox API for tool call: {tool_call_id}")
+            rate_response = await shipvox_client.get_rates(rate_request, timeout_seconds=10.0)
 
-        # Format the response for ElevenLabs
-        formatted_result = format_rate_response_for_elevenlabs(rate_response)
+            # Format the response for ElevenLabs
+            formatted_result = format_rate_response_for_elevenlabs(rate_response)
 
-        # Create the client_tool_result
-        tool_result = {
-            "type": "client_tool_result",
-            "tool_call_id": tool_call.get("tool_call_id"),
-            "result": formatted_result,
-            "is_error": False,
-            "timestamp": time.time(),
-            "requestId": str(uuid.uuid4()),
-            "user": user_info.get("username")
-        }
+            # Create the client_tool_result
+            tool_result = {
+                "type": "client_tool_result",
+                "tool_call_id": tool_call_id,
+                "result": formatted_result,
+                "is_error": False,
+                "timestamp": time.time(),
+                "requestId": str(uuid.uuid4()),
+                "user": user_info.get("username")
+            }
 
-        # Create a contextual update for the UI
-        contextual_update = create_quote_ready_update(
-            rate_response=rate_response,
-            user_info=user_info,
-            request_id=tool_result["requestId"]
-        )
+            # Create a contextual update for the UI
+            contextual_update = create_quote_ready_update(
+                rate_response=rate_response,
+                user_info=user_info,
+                request_id=tool_result["requestId"]
+            )
 
-        # Return both the tool result and the contextual update
-        return tool_result, contextual_update
+            # Return both the tool result and the contextual update
+            logger.info(f"Successfully processed shipping quotes for tool call: {tool_call_id}")
+            return tool_result, contextual_update
+
+        except Exception as api_error:
+            # Handle API-specific errors (non-200 responses, timeouts, etc.)
+            error_message = str(api_error)
+            logger.error(f"API error for tool call {tool_call_id}: {error_message}")
+
+            # Create a detailed error response
+            error_response = create_tool_error_response(
+                tool_call_id=tool_call_id,
+                error_message=f"Failed to get shipping rates: {error_message}",
+                original_request=tool_call
+            )
+            return error_response, None
+
     except Exception as e:
-        logger.error(f"Error handling get_shipping_quotes: {str(e)}")
+        # Handle any other unexpected errors
+        logger.error(f"Unexpected error handling get_shipping_quotes for tool call {tool_call_id}: {str(e)}")
         error_response = create_tool_error_response(
-            tool_call_id=tool_call.get("tool_call_id"),
+            tool_call_id=tool_call_id,
             error_message=f"Error processing shipping quotes: {str(e)}",
             original_request=tool_call
         )

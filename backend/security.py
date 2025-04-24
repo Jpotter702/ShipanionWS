@@ -6,22 +6,12 @@ from typing import Optional, Dict, Any
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-import os
-import secrets
 
-# Generate a secure secret key if not provided in environment variables
-# In production, always set this via environment variable
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", secrets.token_hex(32))
+# Import settings
+from .settings import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, TEST_TOKEN
+
+# JWT algorithm
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-# Test token for easy testing (valid for the 'user' account)
-# This is a pre-generated token that doesn't expire
-# Only use this for testing, never in production
-TEST_TOKEN = os.environ.get(
-    "WS_TEST_TOKEN",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyIn0.dNsYhOKsYlKZzUmOJl8Zpf9SbJ4DJxhd3AU6pO-PWko"
-)
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

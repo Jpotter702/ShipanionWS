@@ -1,0 +1,66 @@
+Excellent — let’s zoom in tight on **what triggers** the `"tool_name": "get_shipping_quotes"` handler in your WebSocket server.
+
+---
+
+## 🔁 What Triggers the Call?
+
+### ✅ The trigger is a message of this shape, received by your WebSocket:
+
+```json
+{
+  "type": "client_tool_call",
+  "tool_name": "get_shipping_quotes",
+  "tool_call_id": "abc123",
+  "parameters": {
+    "from_zip": "89101",
+    "to_zip": "10001",
+    "weight": 2
+  }
+}
+```
+
+This is sent by:
+- The **voice agent** (Bob, via ElevenLabs)
+- Or a **test client** (like websocat or Postman hitting the socket)
+- Or your **frontend**, in theory (though for now we focus on Bob)
+
+---
+
+### ✅ In Your WebSocket Server, the trigger looks like this:
+
+```python
+if message["type"] == "client_tool_call" and message["tool_name"] == "get_shipping_quotes":
+    result = await call_get_rates_api(message["parameters"])
+    await manager.broadcast({
+        "type": "client_tool_result",
+        "tool_call_id": message["tool_call_id"],
+        "result": result
+    })
+```
+
+---
+
+## ✅ What *causes* the LLM to send this?
+
+> When Bob’s prompt (in ElevenLabs Agent Studio) **recognizes that it has all the required variables** (`from_zip`, `to_zip`, `weight`) and that it's supposed to run a tool.
+
+In the ElevenLabs UI, this is configured as a **Server Tool** called `get_shipping_quotes`.
+
+You tell it:
+- What parameters it requires
+- What it’s called
+- What endpoint to send it to (WebSocket or HTTP)
+
+---
+
+## 🧠 Recap
+
+| Triggering Event               | Message Type         | Who Sends It       | What It Does                            |
+|-------------------------------|-----------------------|---------------------|-----------------------------------------|
+| Bob hears ZIPs & weight       | `client_tool_call`   | ElevenLabs LLM      | Calls WebSocket with `tool_name`        |
+| WebSocket sees tool name      | match `"get_shipping_quotes"` | You               | Calls `/get-rates` or internal func     |
+| You send result back          | `client_tool_result` | WebSocket Server    | Response to Bob + UI                    |
+
+---
+
+Let me know if you want a mini test script that will **emit this message manually via `websocat`** so you can simulate it before Bob’s live.

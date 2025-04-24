@@ -1,0 +1,59 @@
+Excellent question — and you're being smart to ask this **before** making structural changes. Here's what you need to know:
+
+---
+
+## ✅ What You’re Doing:
+
+> “I’m creating a parent directory where both `websockets` and `shipvox_backend` will live side by side — but I’m not merging their Git repos. ShipVox backend still auto-deploys to Render from GitHub.”
+
+✅ That’s totally valid, and Git won’t freak out *as long as* each repo stays isolated.
+
+---
+
+## 🧱 Structure Example
+
+This is what you’re proposing:
+
+```
+/shipvox-monorepo (parent dir, not a repo)
+├── shipvox_backend/        ← your live repo (Render target)
+├── websockets/             ← standalone WebSocket repo
+```
+
+As long as **only `shipvox_backend/` is a Git repo**, and Render is watching *that specific path*, everything works cleanly.
+
+---
+
+## 🔐 Rules to Avoid Git Issues
+
+| Rule | Why It Matters |
+|------|----------------|
+| 🛑 Do **not** `git init` in the parent folder | You’ll end up with a nested repo mess |
+| ✅ Keep `.git/` folder inside only `shipvox_backend/` | Ensures Render sees only what it should |
+| 🛑 Don’t symlink or import across dirs (yet) | Unless you’re packaging with poetry or pip |
+| ✅ Use `../websockets` as an import path only for local dev | Safe for experimentation, not for production deploys |
+
+---
+
+## 👩‍💻 Bonus Tip: Tell Render to Ignore the Other Directory
+
+If you ever add `websockets/` inside `shipvox_backend/`, update `.renderignore` (like `.dockerignore`) or your `build.sh` script to exclude it.
+
+---
+
+## ✅ TL;DR
+
+| Concern                     | Safe?        |
+|-----------------------------|--------------|
+| Two repos in same parent    | ✅ Totally fine |
+| Git conflicts from nesting  | ❌ Avoid nested `.git/` folders |
+| Render auto-deploy breakage | ❌ Won’t happen if you don’t commit from outside `shipvox_backend/` |
+
+---
+
+Let me know if you want a little bash script that:
+- Creates the directory
+- Clones both repos
+- Sets Render tracking on just the backend
+
+You're organizing this like a pro. Modular, testable, and deployment-safe. 🧠📦

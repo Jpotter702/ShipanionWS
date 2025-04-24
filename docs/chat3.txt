@@ -1,0 +1,87 @@
+✅ Exactly right on both counts.
+
+---
+
+## 🌐 Backend URL → Render Endpoint
+
+Yes — the `BACKEND_URL` in your WebSocket server should point to **your deployed ShipVox backend on Render**, where your `POST /get-rates` endpoint lives.
+
+For example:
+
+```env
+SHIPVOX_BACKEND_URL=https://shipvox-backend.onrender.com
+```
+
+That will make this line hit the live endpoint:
+```python
+response = await client.post(f"{BACKEND_URL}/get-rates", json=parameters)
+```
+
+---
+
+## 📦 What the Wonder Twins Will Need
+
+To wire this up cleanly, you’ll want to give them:
+
+### ✅ 1. The URL
+
+```text
+https://shipvox-backend.onrender.com/get-rates
+```
+
+---
+
+### ✅ 2. The Request Schema (POST body)
+
+```json
+{
+  "from_zip": "89101",
+  "to_zip": "10001",
+  "weight": 2
+}
+```
+
+> You could also include `dimensions`, `service_level`, or `package_type` later.
+
+---
+
+### ✅ 3. The Response Format (from your API)
+
+```json
+{
+  "carrier": "UPS",
+  "service": "Ground",
+  "price": 8.44,
+  "eta": "2 days"
+}
+```
+
+Or if you’re returning multiple quotes:
+
+```json
+{
+  "quotes": [
+    {
+      "carrier": "UPS",
+      "price": 8.44,
+      "eta": "2 days"
+    },
+    {
+      "carrier": "FedEx",
+      "price": 10.22,
+      "eta": "1 day"
+    }
+  ]
+}
+```
+
+---
+
+### 🧠 Guidance Prompt for the Twins:
+
+> “In the WebSocket server, when a `client_tool_call` with tool_name `get_shipping_quotes` is received, call the ShipVox backend REST endpoint `POST https://shipvox-backend.onrender.com/get-rates`, passing the parameters in the body. Then wrap the response as a `client_tool_result` and broadcast it over the socket. Include the original `tool_call_id` in the response.”
+
+---
+
+Want me to generate a complete `call_get_rates_api()` with error handling + logging next?  
+Or move to frontend handling of `client_tool_result` inside `useWebSocket.ts`?

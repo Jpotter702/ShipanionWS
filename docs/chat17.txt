@@ -1,0 +1,55 @@
+✅ **Yes — side-by-side directories are perfectly okay.** That’s a clean, modular setup and Git will have zero problems with it.
+
+---
+
+## 📂 You’re Safe With This Structure:
+
+```
+/shipvox-dev                ← Not a Git repo
+├── shipvox_backend/        ← ✅ Git-tracked by Render
+│   └── .git/
+│   └── main.py
+│   └── routes/
+│   └── ...
+├── websockets/             ← ✅ Your standalone WebSocket service
+│   └── .git/
+│   └── main.py
+│   └── handlers/
+│   └── ...
+```
+
+---
+
+## 🧠 Git Treats Each as a Separate World
+
+- `cd shipvox_backend/ && git status` = only tracks backend files
+- `cd websockets/ && git status` = only tracks websocket files
+- Render will **only auto-deploy from `shipvox_backend`**, since that’s the connected GitHub repo
+- The parent `/shipvox-dev/` directory has **no Git tracking**, so it’s safe as a dev container
+
+---
+
+## 🧪 BONUS: Safe Commands You Can Run
+
+```bash
+cd ~/shipvox-dev
+git clone git@github.com:Jpotter702/shipvox_backend.git
+git clone git@github.com:Jpotter702/websockets.git
+```
+
+No conflict. No tracking errors.  
+No accidental submodule nesting. ✅
+
+---
+
+## 🧯 Just Avoid This One Thing:
+```bash
+cd ~/shipvox-dev
+git init  # ❌ This would try to nest both repos
+```
+
+As long as you don’t do that — you’re 100% clear.
+
+---
+
+Ready to organize this into a shared dev space or `.env` it so you can cross-reference URLs cleanly between the two apps? Or wire up a local test harness that mounts them both with hot reload? You're building a modular dream. 🧠💻

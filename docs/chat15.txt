@@ -1,0 +1,48 @@
+✅ In this leg — **right now** — your WebSocket server is sending an **HTTP call** to your ShipVox backend.
+
+---
+
+## 🧭 You Are Here:
+
+### The message flow is:
+
+```plaintext
+🧠 WebSocket Server receives:
+{
+  "type": "client_tool_call",
+  "tool_name": "get_shipping_quotes",
+  ...
+}
+```
+
+### Then it does:
+
+```python
+response = await client.post("https://shipvox-backend.onrender.com/get-rates", json=parameters)
+```
+
+📡 That is a **regular HTTP POST** to your REST API. Not another WebSocket message.
+
+---
+
+## 🔁 Why?
+
+Because:
+- The backend is where the business logic lives (`/get-rates`)
+- The WebSocket server is acting like a **proxy** — it’s not running the rate logic itself
+- You haven’t merged the two systems *yet*, so HTTP is the bridge
+
+---
+
+## ✅ So to confirm:
+
+| Action                            | Protocol Used |
+|-----------------------------------|----------------|
+| Voice → WebSocket Server          | WebSocket 🔄 |
+| WebSocket Server → ShipVox API    | **HTTP POST** ✅ |
+| ShipVox API → FedEx/UPS APIs      | HTTP (internal) |
+| WebSocket Server → UI & Voice     | WebSocket 🔄 |
+
+---
+
+Let me know if you want a **debug logger** that shows incoming `client_tool_call` + outgoing `POST /get-rates` payloads in the terminal for testing. Would be super useful right now.

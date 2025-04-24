@@ -1,0 +1,39 @@
+# Define endpoint reference based on current and planned API architecture
+endpoints = [
+    {
+        "Route": "/",
+        "Method": "GET",
+        "Description": "Returns the main app interface (UI rendering)",
+        "Request Payload": "None",
+        "Response": "HTML page (React frontend)",
+        "Notes": "Primarily used for browser access"
+    },
+    {
+        "Route": "/get-rates",
+        "Method": "POST",
+        "Description": "Receives shipping details and returns cheapest and fastest rate options",
+        "Request Payload": "{ originZip, destinationZip, weight, dimensions }",
+        "Response": "{ cheapestOption, cheapestFastestOption }",
+        "Notes": "Triggers normalization, rate requests, and comparison"
+    },
+    {
+        "Route": "/create-label",
+        "Method": "POST",
+        "Description": "Generates a shipping label based on selected carrier and service",
+        "Request Payload": "{ selectedCarrier, serviceType, shipperInfo, recipientInfo, packageDetails }",
+        "Response": "{ labelPDF, trackingNumber, QRCodeURL }",
+        "Notes": "LabelGenerator module handles carrier-specific formatting"
+    },
+    {
+        "Route": "/schedule-pickup",
+        "Method": "POST",
+        "Description": "Schedules a pickup with the selected carrier",
+        "Request Payload": "{ pickupLocation, contactInfo, timeWindow }",
+        "Response": "{ confirmationNumber, pickupTime }",
+        "Notes": "Only used if pickup is requested"
+    }
+]
+
+df_endpoints = pd.DataFrame(endpoints)
+
+tools.display_dataframe_to_user(name="ShipVox Endpoint Reference", dataframe=df_endpoints)

@@ -1,0 +1,69 @@
+Ah, good catch — and honestly, **totally expected at this stage**.
+
+If your current `/get-rates` endpoint returns **all available FedEx rates** (e.g., SmartPost, 2Day, Express Saver, Ground, etc.), it’s still fine for testing — but it’ll flood the WebSocket with more data than the frontend or voice agent expects.
+
+---
+
+## 🧹 Options to Clean It Up (Progressively)
+
+### ✅ Option A: Filter on the WebSocket Server (for now)
+
+Quick & simple — intercept the response and only forward what’s useful.
+
+```python
+def simplify_rates_response(raw_response: dict) -> dict:
+    quotes = raw_response.get("quotes", [])
+    filtered = [q for q in quotes if q["carrier"] == "UPS" or q["service"] in ["Ground", "2Day"]]
+    return { "quotes": filtered[:2] }  # Limit to top 2 for now
+```
+
+Then call this inside your tool router:
+
+```python
+raw = await call_get_rates_api(parameters)
+result = simplify_rates_response(raw)
+```
+
+---
+
+### 🧠 Option B: Add Filters to the Backend `/get-rates` API
+
+You could pass additional params like:
+
+```json
+{
+  "from_zip": "89101",
+  "to_zip": "10001",
+  "weight": 2,
+  "service_filter": ["Ground", "2Day"],
+  "max_quotes": 2
+}
+```
+
+And then inside your backend:
+- Only return rates matching the filter
+- Limit total results
+
+✅ This is ideal long-term
+
+---
+
+### 🧠 Option C: Filter on the Frontend (for quote display only)
+
+You could also do this in `ShippingFeedPage.tsx` if:
+- You want Bob to speak all the quotes, but…
+- Only show a few in the UI
+
+---
+
+## TL;DR:
+
+| Fix Location     | Speed | Long-Term Value |
+|------------------|-------|------------------|
+| WebSocket server | 🟢 Fast | 🟡 Temporary       |
+| Backend filter   | 🟡 Medium | 🟢 Best option    |
+| Frontend only    | 🟢 Fast | 🔴 Doesn’t fix Bob |
+
+---
+
+Want me to write the quick `simplify_rates_response()` function now so you can patch the flood before it hits the frontend?

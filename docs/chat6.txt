@@ -1,0 +1,67 @@
+Great question — let’s break it down fully and cleanly.
+
+---
+
+## 🧰 What is `"tool_name"`?
+
+In the ElevenLabs **Conversational AI system**, when the LLM decides to call a function (a.k.a. a **tool**), it sends a structured WebSocket message like this:
+
+```json
+{
+  "type": "client_tool_call",
+  "tool_name": "get_shipping_quotes",
+  "tool_call_id": "abc123",
+  "parameters": {
+    "from_zip": "89101",
+    "to_zip": "10001",
+    "weight": 2
+  }
+}
+```
+
+The `"tool_name"` is **how the LLM tells you what kind of function to run**.
+
+---
+
+## 🧠 It’s Like the Voice Agent Saying:
+> “Hey, I just heard the user say a ZIP code and a weight — so I want to call the shipping quote tool. The tool is named `get_shipping_quotes`.”
+
+The backend (your WebSocket server) looks at that string, and then **routes the request to the appropriate logic**.
+
+---
+
+## 🔁 What Happens Behind the Scenes:
+
+1. LLM sends message:  
+   `"tool_name": "get_shipping_quotes"`  
+   → This is a hint to your server: *“run this tool logic.”*
+
+2. Your server sees it and does:
+   ```python
+   if message["tool_name"] == "get_shipping_quotes":
+       call_get_rates_api(message["parameters"])
+   ```
+
+3. The result gets returned to the voice agent (so it can speak it) and UI (so it can show it).
+
+---
+
+## 🧠 Tool Name ≠ Function Name (But They Map 1:1)
+
+You can define as many tool names as you want in ElevenLabs Agent Studio.
+
+| Tool Name              | What It Does                      |
+|------------------------|-----------------------------------|
+| `get_shipping_quotes`  | Calls `/get-rates` on your backend |
+| `create_label`         | Calls `/create-label`             |
+| `schedule_pickup`      | Calls `/schedule-pickup`          |
+
+---
+
+### ✅ TL;DR:
+
+- `tool_name` is a **string identifier** sent by the ElevenLabs LLM agent
+- It tells your WebSocket server *which action to run*
+- You match on it in your routing code and forward to the right backend logic
+
+Would you like a full list of potential `tool_name` values we’ll need in ShipVox by the time all sprints are done? I can give you a suggested API+LLM tool list.

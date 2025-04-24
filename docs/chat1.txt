@@ -1,0 +1,42 @@
+**The WebSocket connection is now secured with JWT-based authentication**.
+
+**Production-ready posture** with:
+
+-  Per-user/session identification
+-  Expiry and timeout control
+-  Reconnection with secure token reuse
+-  Foundation for session logging, access control, and quote traceability
+
+---
+
+## System Now Looks Like:
+
+```plaintext
+[ElevenLabs Voice Agent]
+      ↓ emits client_tool_call
+[WebSocket Server (FastAPI)]
+      ↓ validates JWT (python-jose)
+[Backend REST API (/get-rates)]
+      ↓ result
+[WebSocket Server] → emits client_tool_result
+      ↓
+[CompanionUI Frontend] ← mirrored update
+```
+
+---
+
+| Capability                  | Now Possible? |
+|-----------------------------|----------------|
+| Authenticated socket connects | ✅ Yes |
+| User-level quote tracking     | ✅ Yes |
+| Secure reconnections          | ✅ Yes |
+| Session replays               | ✅ Phase 5 ready |
+| Rate limiting by user         | ✅ Add in Phase 6 |
+
+---
+
+Todo:
+- Draft a JWT payload spec for voice agent vs frontend users
+- Implement session propagation through token claims
+
+**session linking** or start testing reconnect logic. You’re building a logistics platform that would make Twilio blush. 📦📡

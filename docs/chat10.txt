@@ -1,0 +1,62 @@
+Perfect follow-up. Here's the key distinction:
+
+---
+
+## 🧠 What Kind of Message Is It?
+
+### ✅ It is a **WebSocket message**, **not** a webhook.
+
+---
+
+## 📡 Message Type: `client_tool_call`
+> Sent by the **ElevenLabs LLM agent** over an open **WebSocket connection**
+
+### 🔁 This is **real-time**, persistent, bidirectional communication.
+
+---
+
+## 🔁 The Flow Looks Like This:
+
+```plaintext
+[ElevenLabs LLM Agent (Bob)] 👂 User says ZIP and weight
+      ↓
+[LLM decides to call a tool]
+      ↓
+Sends WebSocket message:
+{
+  "type": "client_tool_call",
+  "tool_name": "get_shipping_quotes",
+  "parameters": {...}
+}
+      ↓
+[WebSocket Server] handles it immediately
+```
+
+✅ This avoids the **delays and overhead of webhooks**, and allows:
+- Real-time back-and-forth
+- Session-aware message handling
+- Bidirectional syncing with CompanionUI + Bob
+
+---
+
+## 🔗 So When Are Webhooks Used?
+
+Webhooks are only used in **older, stateless integrations** (like Stripe, GitHub, or the original ElevenLabs v1 SDK).
+
+In this setup — using ElevenLabs **Conversational AI** with Server Tools —  
+**everything runs over WebSockets.**
+
+---
+
+## TL;DR
+
+| Message Type         | Transport     | Who Sends It     | Purpose                         |
+|----------------------|----------------|------------------|----------------------------------|
+| `client_tool_call`   | 🧠 WebSocket   | ElevenLabs Agent | Run your backend logic (e.g. rate quote) |
+| `client_tool_result` | 🧠 WebSocket   | Your Server      | Send result back to Bob/LLM     |
+| `contextual_update`  | 🧠 WebSocket   | Your Server      | Send state sync to Bob’s brain  |
+
+---
+
+Want me to generate a full message example + `websocat` command for you to simulate this now in local testing?
+Want me to generate a full message example + `websocat` command for you to simulate this now in local testing?

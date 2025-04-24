@@ -1,0 +1,64 @@
+💯 Yes — and *this is exactly* why we’re unifying the WebSocket server into the ShipVox backend in Sprint 2.
+
+You're anticipating the future structure perfectly. Once merged:
+
+---
+
+## 🧱 Directory Structure Post-Unification
+
+```
+shipvox-backend/
+├── main.py
+├── routes/
+│   ├── rates.py          ← defines `/get-rates`
+│   ├── labels.py         ← defines `/create-label`
+│   └── websocket.py      ← defines `/ws` endpoint
+├── services/
+│   ├── rate_tools.py     ← actual logic for rate quoting
+│   └── label_tools.py    ← logic to create FedEx labels
+├── utils/
+│   └── auth.py           ← shared JWT logic
+└── models/
+    └── payloads.py       ← message schemas (optional)
+```
+
+---
+
+### 🔁 So… Do You Still Need an HTTP Call?
+
+**Short-term (before merge):** Yes  
+```python
+await httpx.post(f"{BACKEND_URL}/get-rates", json=parameters)
+```
+
+**After merge:** No
+
+Once WebSocket lives *in the same app* as `/get-rates`, you’ll just:
+
+```python
+from services.rate_tools import get_shipping_quotes
+
+quote = await get_shipping_quotes(parameters)
+```
+
+Or, if the REST route already calls it:
+
+```python
+from routes.rates import get_rates
+
+quote = await get_rates(parameters)
+```
+
+---
+
+## ✅ TL;DR
+
+| Timing          | Call Style              | Notes                              |
+|-----------------|--------------------------|-------------------------------------|
+| Now (separate)  | HTTP (httpx.post)        | Cross-service call                 |
+| After merge     | Direct function import   | In-app call (cleaner, faster)      |
+
+---
+
+Want me to pre-scaffold a `services/rate_tools.py` with a `get_shipping_quotes()` function that you can reuse in both the WebSocket and `/get-rates` REST route?
+Want me to pre-scaffold a `services/rate_tools.py` with a `get_shipping_quotes()` function that you can reuse in both the WebSocket and `/get-rates` REST route?

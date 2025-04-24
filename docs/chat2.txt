@@ -1,0 +1,125 @@
+Locked in. No drift. Eyes on the ball. 🏈  
+We're diving straight into:
+
+---
+
+## 🔁 **Sprint 1 – Task 2:**  
+**Handle `client_tool_call` for `get_shipping_quotes`**
+
+---
+
+### 🎯 Goal:
+When the WebSocket receives this message:
+
+```json
+{
+  "type": "client_tool_call",
+  "tool_name": "get_shipping_quotes",
+  "tool_call_id": "abc123",
+  "parameters": {
+    "from_zip": "89101",
+    "to_zip": "10001",
+    "weight": 2
+  }
+}
+```
+
+It should:
+
+1. Validate the message
+2. Forward the payload to your existing REST API (`/get-rates`)
+3. Receive the response from the ShipVox backend
+4. Wrap it in a `client_tool_result`
+5. Emit the result back over the WebSocket to the correct clients
+
+---
+
+## ✅ Implementation Steps
+
+### 1. Add a message router to `main.py` or `handlers/router.py`
+
+```python
+async def route_tool_call(tool_name: str, parameters: dict) -> dict:
+    if tool_name == "get_shipping_quotes":
+        response = await call_get_rates_api(parameters)
+        return {
+            "type": "client_tool_result",
+            "tool_call_id": parameters.get("tool_call_id", "unknown"),
+            "result": response,
+            "is_error": False
+        }
+    return {
+        "type": "client_tool_result",
+        "tool_call_id": parameters.get("tool_call_id", "unknown"),
+        "result": {"error": "Unsupported tool"},
+        "is_error": True
+    }
+```
+
+---
+
+### 2. Write the `call_get_rates_api()` function
+
+This will POST to your existing backend:
+
+```python
+import httpx
+
+BACKEND_URL = os.getenv("SHIPVOX_BACKEND_URL", "http://localhost:8000")
+
+async def call_get_rates_api(parameters: dict) -> dict:
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{BACKEND_URL}/get-rates",
+            json=parameters
+        )
+        return response.json()
+```
+
+---
+
+### 3. In your WebSocket message handler:
+
+```python
+if message["type"] == "client_tool_call":
+    tool_name = message.get("tool_name")
+    parameters = message.get("parameters", {})
+    parameters["tool_call_id"] = message.get("tool_call_id", None)
+
+    result = await route_tool_call(tool_name, parameters)
+    await manager.broadcast(result)
+```
+
+---
+
+### 🧪 Test Message
+
+Once implemented, you can test with:
+
+```bash
+echo '{"type":"client_tool_call","tool_name":"get_shipping_quotes","tool_call_id":"abc123","parameters":{"from_zip":"89101","to_zip":"10001","weight":2}}' | websocat ws://localhost:8000/ws?token=YOUR_JWT
+```
+
+---
+
+### ✅ Output
+
+WebSocket should emit back:
+
+```json
+{
+  "type": "client_tool_result",
+  "tool_call_id": "abc123",
+  "result": {
+    "carrier": "UPS",
+    "price": 8.44,
+    "eta": "2 days"
+  },
+  "is_error": false
+}
+```
+
+---
+
+Let me know when the call is wired in and returning clean —  
+and I’ll help verify the frontend `useWebSocket` hook is picking it up next. 💡

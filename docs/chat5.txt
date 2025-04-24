@@ -1,0 +1,88 @@
+🔧 Great timing for this question — because you're right on the edge of that transition.
+
+Here’s a clear answer with context:
+
+---
+
+## 🧱 Current Architecture Snapshot
+
+| Component             | Status      | Location                          |
+|------------------------|-------------|-----------------------------------|
+| ShipVox Backend (REST) | ✅ Live     | Render (FastAPI REST)             |
+| WebSocket Server       | 🟡 In Progress | Separate FastAPI app             |
+| CompanionUI Frontend   | ✅ Live     | Vercel                            |
+| ElevenLabs Agent       | ✅ Live     | External                          |
+
+---
+
+## 🧠 Why Keep WebSockets Separate *for Now*?
+
+- You needed to **stand it up fast** (which we did ✅)
+- You needed to test tools like `client_tool_call` without interfering with your production backend
+- You’re still iterating on **message format**, **broadcast logic**, and **auth**
+
+This is perfect for prototyping — but not ideal long-term.
+
+---
+
+## 🔁 When to Merge WebSocket into ShipVox Backend
+
+> **The right moment to unify is after Sprint 1 is complete**, when the WebSocket server:
+- ✅ Authenticates JWT clients
+- ✅ Routes at least one tool call (`get_shipping_quotes`)
+- ✅ Returns `client_tool_result` to voice + UI
+
+At that point:
+- The message contract is **stable**
+- You’ve verified backend-to-backend call to `/get-rates`
+- WebSocket is no longer “experimental middleware” — it’s **core glue**
+
+---
+
+## 🔧 The Unification Plan (Start of Sprint 2)
+
+### ✅ Move WebSocket logic into ShipVox backend under `/realtime` or `/sockets`
+
+Example structure:
+```
+shipvox-backend/
+├── main.py
+├── routes/
+│   ├── rates.py
+│   ├── labels.py
+│   └── websocket.py     ← HERE
+├── services/
+│   └── rates.py
+└── utils/
+    └── token.py
+```
+
+### ✅ Benefits
+
+| Benefit                | Result                                 |
+|------------------------|----------------------------------------|
+| Shared service access  | Can call `get_rates()` directly       |
+| Shared JWT logic       | Use the same `verify_token()` everywhere |
+| Single deployment      | One FastAPI app to rule them all       |
+| Simpler ops & scaling  | No need to juggle two APIs             |
+
+---
+
+## 🚦 What Triggers the Merge?
+
+Here’s your checklist:
+
+- [x] JWT connect auth works
+- [x] `get_shipping_quotes` returns cleanly from backend
+- [ ] WebSocket server confirmed stable (e.g., no crashes on reconnects)
+- [ ] Client-tool flow tested end-to-end
+
+Once those are ✅, we merge WebSocket into the backend and deprecate the standalone server.
+
+---
+
+Would you like me to generate:
+- A `websocket.py` module scaffold ready for drop-in to the backend?
+- Or a plan for how to preserve reconnect sessions after the merge?
+
+This is the moment where your architecture graduates from "patch and pipe" to **fully integrated event-based glue.** 🚀

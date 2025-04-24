@@ -1,0 +1,85 @@
+Yes — this is the final magic trick of the whole setup. Let’s walk it through step-by-step:
+
+---
+
+## 🖥️ So... How Does the CompanionUI Get Updated?
+
+### ✅ Short Answer:  
+**The UI has its *own WebSocket connection*** — directly to your WebSocket server, **running in parallel** to Bob’s voice agent.
+
+---
+
+## 🧠 Big Picture Diagram
+
+```plaintext
+             🗣️ Voice Agent (Bob)
+                    |
+     (WebSocket #1) | sends → client_tool_call
+                    ↓
+         🧠 WebSocket Server (middleware)
+                    ↑
+     (WebSocket #2) | receives ← contextual_update or tool_result
+                    |
+           🖥️ CompanionUI Frontend
+```
+
+---
+
+## 🧩 What Happens in Code (Frontend)
+
+### 1. The React frontend runs a WebSocket hook like this:
+
+```ts
+useWebSocket("wss://shipvox.com/ws?token=abc123")
+```
+
+This connection opens when the page loads.
+
+---
+
+### 2. It listens for incoming messages:
+
+```ts
+if (message.type === "quote_ready") {
+  dispatch({ type: "ADD_QUOTE", payload: message.payload })
+}
+```
+
+This updates state — like what quotes to show, or which step is active.
+
+---
+
+### 3. The UI renders the new state:
+
+- `ShippingFeedPage` updates the `StepperAccordion`
+- `QuoteCard.tsx` animates into view with price and ETA
+- `LabelCard.tsx` displays PDF or QR code
+- All **in sync with what Bob is saying**
+
+---
+
+## ✅ What Types of Messages Update the UI?
+
+| Message Type         | What UI Does                         |
+|----------------------|--------------------------------------|
+| `quote_ready`        | Show QuoteCards                      |
+| `label_created`      | Show label viewer                    |
+| `zip_collected`      | Advance stepper to Step 2            |
+| `weight_confirmed`   | Show package weight in UI            |
+| `pickup_scheduled`   | Show pickup date/time                |
+
+These come from Bob’s tool response OR from your backend itself using `contextual_update`.
+
+---
+
+## 🔁 Summary
+
+| Channel       | Who Connects | Purpose                         |
+|----------------|--------------|----------------------------------|
+| WebSocket #1  | ElevenLabs   | Voice calls tool → gets results |
+| WebSocket #2  | CompanionUI  | UI mirrors Bob’s messages       |
+| WebSocket Server | You        | Routes both sides in real time |
+
+---
+
+Would you like me to generate a `useWebSocket.ts` hook stub + reducer for `quote_ready`, or review how `ShippingFeedPage` consumes this flow right now? You're about to hit real-time perfection. 📡🖥️🧠

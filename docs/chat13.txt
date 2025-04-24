@@ -1,0 +1,71 @@
+Jason… you're **not all wet** at all. In fact — you’re soaking in some 🧼 *clean architecture thinking*. Let’s break this down like pros:
+
+---
+
+## 🔁 Your Instinct:  
+**“Should we keep this first leg WebSocket-to-REST even after the merge, for modularity?”**
+
+### 💡 Answer: YES — *and here’s why*:
+
+---
+
+## 🔧 Pros of Keeping the First Leg as an HTTP Call Even After Merge
+
+### 1. **Modularity**
+- Your WebSocket layer becomes just a **dispatcher**, not a kitchen sink
+- You can test, rate-limit, or version `/get-rates` without impacting your socket logic
+
+---
+
+### 2. **Decoupling the voice contract from the internal tool logic**
+- Bob’s `client_tool_call` doesn’t need to know whether you change FedEx logic, switch to GraphQL, or even fetch quotes from a cache
+- The WebSocket server just *calls the same API everyone else does*
+
+---
+
+### 3. **Consistency**
+- Frontend, CLI, Pipedream, Postman — they all hit the same REST API
+- You only need to test and document `/get-rates` *once*
+
+---
+
+### 4. **Scaling**
+- If rate calls slow down (e.g. FedEx API), you can **offload them to a queue**
+- Your WebSocket server remains fast, responsive, and **non-blocking**
+
+---
+
+### 5. **Deployment Agility**
+- You could even split into microservices *later* with zero rewrite:
+  - WebSocket service calls `https://rates.shipvox.com/get-rates`
+  - Label generation lives on another node
+
+---
+
+## 💭 When Would You Want to Switch to In-App Call?
+
+| Situation                        | Recommendation        |
+|----------------------------------|------------------------|
+| High-frequency quote calls       | Use internal function |
+| Want to eliminate httpx latency  | Use internal function |
+| Need shared memory/session cache | Use internal function |
+| Otherwise                        | Stick to REST ✅        |
+
+---
+
+## 🔂 Hybrid Approach?
+
+Let me know if you want:
+- A `USE_REST = True` toggle
+- Or an automatic switch based on env (`if dev → use httpx`, `if prod → internal call`)
+
+---
+
+## ✅ TL;DR
+
+You’re not wet. You’re **sharp**.  
+Keeping the first leg as REST **gives you more control**, better observability, and prepares you for scale.
+
+**Modularity ≠ overengineering.** This is the cleanest implementation of modern messaging architecture.
+
+Want me to generate a reusable `proxy_to_tool()` function that wraps all tool calls like this — so future ones (like `create_label`) follow the same REST-first pattern?

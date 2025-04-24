@@ -1,0 +1,122 @@
+A consolidated documentation package  to effectively work with the `/get-rates` endpoint and integrate it within the ElevenLabs Conversational AI framework.
+
+---
+
+## 📦 `/get-rates` Endpoint Documentation
+
+### 🔹 Endpoint
+
+```
+POST https://shipvox-backend.onrender.com/get-rates
+```
+
+### 🔹 Request Body (JSON)
+
+```json
+{
+  "from_zip": "89101",
+  "to_zip": "10001",
+  "weight": 2
+}
+```
+
+*Note:* Currently, the endpoint supports FedEx rates. UPS integration is pending due to account setup issues.
+
+### 🔹 Response Body (JSON)
+
+```json
+{
+  "quotes": [
+    {
+      "carrier": "FedEx",
+      "price": 9.15,
+      "eta": "1 day"
+    },
+    {
+      "carrier": "FedEx",
+      "price": 8.44,
+      "eta": "2 days"
+    }
+  ]
+}
+```
+
+*Note:* The response includes multiple FedEx service options. Filtering logic can be applied client-side or within the WebSocket server to display the most relevant options.
+
+---
+
+## 🧠 ElevenLabs Conversational AI Integration
+
+### 🔹 WebSocket Communication
+
+ElevenLabs Conversational AI utilizes WebSocket connections for real-time interactions. The agent sends and receives messages in JSON format over this persistent connection.
+
+**Client Tool Call Example:**
+
+```json
+{
+  "type": "client_tool_call",
+  "tool_name": "get_shipping_quotes",
+  "tool_call_id": "abc123",
+  "parameters": {
+    "from_zip": "89101",
+    "to_zip": "10001",
+    "weight": 2
+  }
+}
+```
+
+**Client Tool Result Example:**
+
+```json
+{
+  "type": "client_tool_result",
+  "tool_call_id": "abc123",
+  "result": {
+    "quotes": [
+      {
+        "carrier": "FedEx",
+        "price": 9.15,
+        "eta": "1 day"
+      },
+      {
+        "carrier": "FedEx",
+        "price": 8.44,
+        "eta": "2 days"
+      }
+    ]
+  },
+  "is_error": false
+}
+```
+
+*Note:* The `tool_call_id` is used to correlate the request and response.
+
+### 🔹 Server Tools Configuration
+
+To enable the agent to call external APIs like `/get-rates`, configure a Server Tool in the ElevenLabs dashboard:
+
+- **Name:** `get_shipping_quotes`
+- **Description:** Retrieves shipping quotes based on origin, destination, and package weight.
+- **Method:** `POST`
+- **URL:** `https://shipvox-backend.onrender.com/get-rates`
+- **Parameters:**
+  - `from_zip` (string, required)
+  - `to_zip` (string, required)
+  - `weight` (number, required)
+
+*Note:* Ensure that the parameter names in the tool configuration match the keys expected by the `/get-rates` endpoint.
+
+---
+
+## 📚 Additional Resources
+
+For comprehensive guidance on integrating and configuring tools within ElevenLabs Conversational AI, refer to the following documentation:
+
+- [Server Tools Configuration](https://elevenlabs.io/docs/conversational-ai/customization/tools/server-tools)
+- [WebSocket API Reference](https://elevenlabs.io/docs/conversational-ai/api-reference/conversational-ai/websocket)
+- [Conversational AI Overview](https://elevenlabs.io/docs/conversational-ai/overview)
+
+---
+
+If you need assistance with setting up the Server Tool in the ElevenLabs dashboard or integrating the WebSocket communication in your application, feel free to ask! 

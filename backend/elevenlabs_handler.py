@@ -58,9 +58,9 @@ async def handle_get_shipping_quotes(tool_call: Dict[str, Any], user_info: Dict[
                 ), None
 
         try:
-            # Forward the request to the ShipVox API with a 10-second timeout
+            # Forward the request to the ShipVox API with a 30-second timeout
             logger.info(f"Sending rate request to ShipVox API for tool call: {tool_call_id}")
-            rate_response = await shipvox_client.get_rates(rate_request, timeout_seconds=10.0)
+            rate_response = await shipvox_client.get_rates(rate_request, timeout_seconds=30.0)
 
             # Format the response for ElevenLabs
             formatted_result = format_rate_response_for_elevenlabs(rate_response)

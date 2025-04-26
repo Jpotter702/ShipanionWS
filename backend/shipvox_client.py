@@ -48,7 +48,7 @@ class ShipVoxClient:
         """Close the HTTP client."""
         await self.client.aclose()
 
-    async def get_rates(self, rate_request: Dict[str, Any], timeout_seconds: float = 10.0) -> Dict[str, Any]:
+    async def get_rates(self, rate_request: Dict[str, Any], timeout_seconds: float = 30.0) -> Dict[str, Any]:
         """
         Get shipping rates from the ShipVox API or internal service.
 
@@ -57,7 +57,7 @@ class ShipVoxClient:
 
         Args:
             rate_request: Dictionary containing rate request parameters
-            timeout_seconds: Timeout in seconds for this specific request (default: 10.0)
+            timeout_seconds: Timeout in seconds for this specific request (default: 30.0)
                             Only used when USE_INTERNAL is False
 
         Returns:

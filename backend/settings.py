@@ -7,7 +7,7 @@ import os
 from typing import Dict, Any
 
 # API settings
-SHIPVOX_API_URL = os.environ.get("SHIPVOX_API_URL", "http://localhost:8000/api")
+SHIPVOX_API_URL = os.environ.get("SHIPVOX_API_URL", "http://localhost:8003/api")
 
 # Authentication settings
 SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key-here")
@@ -28,7 +28,7 @@ TEST_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyIn0.dNsYhOKsY
 def get_settings() -> Dict[str, Any]:
     """
     Get all settings as a dictionary.
-    
+
     Returns:
         Dictionary containing all settings
     """

@@ -164,9 +164,15 @@ async def websocket_endpoint(websocket: WebSocket, session_id: Optional[str] = Q
         return
 
     # Verify JWT token
-    payload = verify_token(token)
-    if not payload:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid or expired token")
+    try:
+        payload = verify_token(token)
+        if not payload:
+            logger.error(f"Token verification failed: {token}")
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid or expired token")
+            return
+    except Exception as e:
+        logger.error(f"Token verification error: {str(e)}")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=f"Token verification error: {str(e)}")
         return
 
     # Extract user information from token

@@ -7,6 +7,7 @@ It processes client_tool_call messages and returns client_tool_result responses.
 import logging
 import time
 import uuid
+import httpx
 from typing import Dict, Any, Optional, Tuple
 from .shipvox_client import ShipVoxClient
 from .contextual_update import create_quote_ready_update, create_label_created_update
@@ -75,11 +76,21 @@ async def handle_get_shipping_quotes(tool_call: Dict[str, Any], user_info: Dict[
                 "user": user_info.get("username")
             }
 
-            # Create a contextual update for the UI
+            # Create a contextual update for the UI and ElevenLabs
+            # Extract information for the human-readable message
+            cheapest = rate_response.get("cheapest_option", {})
+            carrier = cheapest.get("carrier", "")
+            price = cheapest.get("cost", 0)
+            service = cheapest.get("service_name", "")
+
+            # Create a user-friendly message
+            human_message = f"Quote ready from {carrier} {service} for ${price:.2f}"
+
             contextual_update = create_quote_ready_update(
                 rate_response=rate_response,
                 user_info=user_info,
-                request_id=tool_result["requestId"]
+                request_id=tool_result["requestId"],
+                human_readable_message=human_message
             )
 
             # Return both the tool result and the contextual update
@@ -259,9 +270,45 @@ async def handle_create_label(tool_call: Dict[str, Any], user_info: Dict[str, An
         url = f"{shipvox_client.base_url}/labels"
         logger.info(f"Sending label request to {url}")
 
-        response = await shipvox_client.client.post(url, json=label_request)
-        response.raise_for_status()
-        label_response = response.json()
+        try:
+            # Use a 10-second timeout for consistency with get_rates
+            response = await shipvox_client.client.post(url, json=label_request, timeout=10.0)
+            response.raise_for_status()
+            label_response = response.json()
+        except httpx.HTTPStatusError as e:
+            # Handle non-200 responses
+            status_code = e.response.status_code
+            error_detail = f"HTTP {status_code}"
+            try:
+                # Try to extract error details from response
+                error_json = e.response.json()
+                if isinstance(error_json, dict) and "detail" in error_json:
+                    error_detail = f"{error_detail}: {error_json['detail']}"
+            except Exception:
+                # If we can't parse the response as JSON, use the response text
+                if e.response.text:
+                    error_detail = f"{error_detail}: {e.response.text[:200]}"
+
+            logger.error(f"Label request failed with {error_detail}")
+            return create_tool_error_response(
+                tool_call_id=tool_call.get("tool_call_id"),
+                error_message=f"API returned error: {error_detail}",
+                original_request=tool_call
+            ), None
+        except httpx.TimeoutException as e:
+            logger.error(f"Label request timed out after 10 seconds: {str(e)}")
+            return create_tool_error_response(
+                tool_call_id=tool_call.get("tool_call_id"),
+                error_message="timeout calling labels endpoint",
+                original_request=tool_call
+            ), None
+        except httpx.RequestError as e:
+            logger.error(f"Label request network error: {str(e)}")
+            return create_tool_error_response(
+                tool_call_id=tool_call.get("tool_call_id"),
+                error_message=f"Network error: {str(e)}",
+                original_request=tool_call
+            ), None
 
         # Format the response for ElevenLabs
         formatted_result = {
@@ -283,11 +330,19 @@ async def handle_create_label(tool_call: Dict[str, Any], user_info: Dict[str, An
             "user": user_info.get("username")
         }
 
-        # Create a contextual update for the UI
+        # Create a contextual update for the UI and ElevenLabs
+        # Extract information for the human-readable message
+        tracking_number = label_response.get("tracking_number", "")
+        carrier = label_response.get("carrier", "")
+
+        # Create a user-friendly message
+        human_message = f"Label created with {carrier} tracking number {tracking_number}"
+
         contextual_update = create_label_created_update(
             label_response=label_response,
             user_info=user_info,
-            request_id=tool_result["requestId"]
+            request_id=tool_result["requestId"],
+            human_readable_message=human_message
         )
 
         # Return both the tool result and the contextual update
@@ -306,6 +361,63 @@ tool_handlers = {
     "get_shipping_quotes": handle_get_shipping_quotes,
     "create_label": handle_create_label,
 }
+
+def create_elevenlabs_contextual_update(
+    tool_result: Dict[str, Any],
+    tool_name: str,
+    user_info: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Create a contextual update specifically for ElevenLabs.
+
+    Args:
+        tool_result: The client_tool_result message
+        tool_name: The name of the tool that was called
+        user_info: Information about the authenticated user
+
+    Returns:
+        A contextual_update message for ElevenLabs
+    """
+    # Extract information from the tool result
+    is_error = tool_result.get("is_error", False)
+    result = tool_result.get("result", {})
+
+    if is_error:
+        # Create an error message
+        message = f"Error processing {tool_name}: {result.get('error', 'Unknown error')}"
+    else:
+        # Create a success message based on the tool name
+        if tool_name == "get_shipping_quotes":
+            # For shipping quotes, extract the cheapest option
+            if isinstance(result, list) and len(result) > 0:
+                cheapest = min(result, key=lambda x: x.get("price", float("inf")))
+                carrier = cheapest.get("carrier", "")
+                price = cheapest.get("price", 0)
+                message = f"Quote ready from {carrier} for ${price:.2f}"
+            else:
+                message = "Shipping quotes received"
+        elif tool_name == "create_label":
+            # For label creation, extract the tracking number
+            tracking_number = result.get("tracking_number", "")
+            carrier = result.get("carrier", "")
+            message = f"Label created with {carrier} tracking number {tracking_number}"
+        else:
+            # Generic message for other tools
+            message = f"{tool_name} completed successfully"
+
+    # Create the contextual update
+    return {
+        "type": "contextual_update",
+        "text": f"{tool_name}_result",
+        "data": {
+            "message": message,
+            "tool_name": tool_name,
+            "is_error": is_error
+        },
+        "timestamp": time.time(),
+        "requestId": tool_result.get("requestId", str(uuid.uuid4())),
+        "user": user_info.get("username")
+    }
 
 async def handle_client_tool_call(message: Dict[str, Any], user_info: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
     """
@@ -328,7 +440,24 @@ async def handle_client_tool_call(message: Dict[str, Any], user_info: Dict[str, 
         # Check if we have a handler for this tool
         if tool_name in tool_handlers:
             logger.info(f"Processing tool call for: {tool_name}")
-            return await tool_handlers[tool_name](client_tool_call, user_info)
+
+            # Call the appropriate handler
+            tool_result, contextual_update = await tool_handlers[tool_name](client_tool_call, user_info)
+
+            # Create a second contextual update specifically for ElevenLabs
+            elevenlabs_update = create_elevenlabs_contextual_update(
+                tool_result=tool_result,
+                tool_name=tool_name,
+                user_info=user_info
+            )
+
+            # Combine the two contextual updates
+            if contextual_update:
+                # Return both updates as a list
+                return tool_result, [contextual_update, elevenlabs_update]
+            else:
+                # Return just the ElevenLabs update
+                return tool_result, elevenlabs_update
         else:
             logger.warning(f"No handler found for tool: {tool_name}")
             error_response = create_tool_error_response(

@@ -208,13 +208,26 @@ async def websocket_endpoint(websocket: WebSocket, session_id: Optional[str] = Q
             await websocket.send_json(response)
 
             # If there's a contextual update, broadcast it to the session
-            if contextual_update and session_id:
-                # Add session ID to the contextual update
-                contextual_update['session_id'] = session_id
-                await manager.broadcast_to_session(session_id, contextual_update)
-            # If there's a contextual update but no session, broadcast to all
-            elif contextual_update:
-                await manager.broadcast(contextual_update)
+            if contextual_update:
+                # Check if it's a list of updates
+                if isinstance(contextual_update, list):
+                    for update in contextual_update:
+                        if session_id:
+                            # Add session ID to the contextual update
+                            update['session_id'] = session_id
+                            await manager.broadcast_to_session(session_id, update)
+                        else:
+                            # No session, broadcast to all
+                            await manager.broadcast(update)
+                else:
+                    # Single update
+                    if session_id:
+                        # Add session ID to the contextual update
+                        contextual_update['session_id'] = session_id
+                        await manager.broadcast_to_session(session_id, contextual_update)
+                    else:
+                        # No session, broadcast to all
+                        await manager.broadcast(contextual_update)
 
             # If the message should be broadcast to all clients, do so
             elif data.get('broadcast', False):

@@ -51,6 +51,9 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     return encoded_jwt
 
 def verify_token(token: str) -> Optional[Dict[str, Any]]:
+    print(f"DEBUG: Incoming token: '{token}'")
+    print(f"DEBUG: Server TEST_TOKEN: '{TEST_TOKEN}'")
+    print(f"DEBUG: Tokens match? {token == TEST_TOKEN}")
     """Verify a JWT token and return its payload if valid."""
     try:
         # Check if this is the test token

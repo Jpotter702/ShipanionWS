@@ -14,7 +14,8 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key-here")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 # WebSocket settings
-ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+# In settings.py
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000,https://shipanionws.onrender.com,34.150.190.255").split(",")
 
 # Debug settings
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"

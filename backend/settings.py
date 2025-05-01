@@ -15,7 +15,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", 
 
 # WebSocket settings
 # In settings.py
-ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000,https://shipanionws.onrender.com,34.150.190.255").split(",")
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000,https://shipanionws.onrender.com").split(",")
 
 # Debug settings
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"

@@ -1,133 +1,157 @@
 """
-ShipVox API Client
+Mock ShipVox API Client
 
-This module provides a client for interacting with the ShipVox API.
-It handles making requests to the ShipVox API endpoints and processing responses.
-When USE_INTERNAL is True, it calls internal functions directly instead of making HTTP requests.
+This is a placeholder implementation for the ShipVox API client.
+In a production environment, this would be replaced with actual API calls.
 """
-import httpx
-import json
 import logging
-from typing import Dict, Any, Optional
-import os
-from pydantic import BaseModel
-from .settings import SHIPVOX_API_URL, USE_INTERNAL
-
-# Import internal service functions if USE_INTERNAL is True
-if USE_INTERNAL:
-    from .shipping_service import get_shipping_quotes as internal_get_shipping_quotes
-    from .shipping_service import create_shipping_label as internal_create_shipping_label
+import asyncio
+import random
+from typing import Dict, Any, List
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class RateRequest(BaseModel):
-    """Model for rate request data."""
-    origin_zip: str
-    destination_zip: str
-    weight: float
-    dimensions: Optional[Dict[str, float]] = None
-    pickup_requested: bool = False
-
 class ShipVoxClient:
-    """Client for interacting with the ShipVox API."""
-
-    def __init__(self, base_url: str = SHIPVOX_API_URL):
+    """Mock client for the ShipVox API"""
+    
+    def __init__(self):
+        """Initialize the ShipVox client"""
+        logger.info("Initializing mock ShipVox client")
+        
+        # Mock carrier list
+        self.carriers = ["FedEx", "UPS", "USPS", "DHL"]
+        
+        # Mock service types by carrier
+        self.service_types = {
+            "FedEx": ["Ground", "2Day", "Priority Overnight"],
+            "UPS": ["Ground", "3 Day Select", "2nd Day Air", "Next Day Air"],
+            "USPS": ["First Class", "Priority Mail", "Priority Mail Express"],
+            "DHL": ["Express", "Ground", "eCommerce"]
+        }
+    
+    async def get_rates(self, rate_request: Dict[str, Any], timeout_seconds: float = 10.0) -> Dict[str, Any]:
         """
-        Initialize the ShipVox API client.
-
-        Args:
-            base_url: Base URL for the ShipVox API
-        """
-        self.base_url = base_url
-        self.client = httpx.AsyncClient(timeout=30.0)  # 30 second timeout
-        logger.info(f"ShipVoxClient initialized with base URL: {base_url}")
-
-    async def close(self):
-        """Close the HTTP client."""
-        await self.client.aclose()
-
-    async def get_rates(self, rate_request: Dict[str, Any], timeout_seconds: float = 30.0) -> Dict[str, Any]:
-        """
-        Get shipping rates from the ShipVox API or internal service.
-
-        When USE_INTERNAL is True, this method calls the internal get_shipping_quotes function directly.
-        When USE_INTERNAL is False, it makes an HTTP request to the ShipVox API.
-
+        Get shipping rates for a given request.
+        
         Args:
             rate_request: Dictionary containing rate request parameters
-            timeout_seconds: Timeout in seconds for this specific request (default: 30.0)
-                            Only used when USE_INTERNAL is False
-
+            timeout_seconds: Timeout for the API call
+            
         Returns:
-            Dictionary containing rate response data
-
-        Raises:
-            httpx.HTTPError: If the request fails (when USE_INTERNAL is False)
-            httpx.TimeoutException: If the request times out (when USE_INTERNAL is False)
-            TimeoutError: If the internal call times out (when USE_INTERNAL is True)
-            ValueError: If required fields are missing
-            Exception: For any other errors
+            Dictionary containing shipping rate quotes
         """
-        # If USE_INTERNAL is True, call the internal function directly
-        if USE_INTERNAL:
-            logger.info("Using internal get_shipping_quotes function")
-            try:
-                # Call the internal function
-                result = await internal_get_shipping_quotes(rate_request)
-                logger.info("Internal get_shipping_quotes call successful")
-                return result
-            except TimeoutError as e:
-                # Handle timeout from internal function
-                logger.error(f"Internal get_shipping_quotes call timed out: {str(e)}")
-                # Re-raise with the exact error message
-                raise Exception("timeout calling rates endpoint")
-            except ValueError as e:
-                # Handle validation errors from internal function
-                logger.error(f"Internal get_shipping_quotes call failed with validation error: {str(e)}")
-                raise Exception(f"Validation error: {str(e)}")
-            except Exception as e:
-                # Handle any other errors from internal function
-                logger.error(f"Unexpected error in internal get_shipping_quotes call: {str(e)}")
-                raise
-        else:
-            # Use the REST API
-            url = f"{self.base_url}/get-rates"
-            logger.info(f"Sending rate request to {url} with timeout of {timeout_seconds} seconds")
-
-            # Create a specific timeout for this request
-            timeout = httpx.Timeout(timeout_seconds)
-
-            try:
-                response = await self.client.post(url, json=rate_request, timeout=timeout)
-                response.raise_for_status()
-                result = response.json()
-                logger.info("Rate request successful")
-                return result
-            except httpx.HTTPStatusError as e:
-                # Handle non-200 responses
-                status_code = e.response.status_code
-                error_detail = f"HTTP {status_code}"
-                try:
-                    # Try to extract error details from response
-                    error_json = e.response.json()
-                    if isinstance(error_json, dict) and "detail" in error_json:
-                        error_detail = f"{error_detail}: {error_json['detail']}"
-                except Exception:
-                    # If we can't parse the response as JSON, use the response text
-                    if e.response.text:
-                        error_detail = f"{error_detail}: {e.response.text[:200]}"
-
-                logger.error(f"Rate request failed with {error_detail}")
-                raise Exception(f"API returned error: {error_detail}")
-            except httpx.TimeoutException as e:
-                logger.error(f"Rate request timed out after {timeout_seconds} seconds: {str(e)}")
-                # Use the exact error message specified in the requirements
-                raise Exception("timeout calling rates endpoint")
-            except httpx.RequestError as e:
-                logger.error(f"Rate request network error: {str(e)}")
-                raise Exception(f"Network error: {str(e)}")
-            except Exception as e:
-                logger.error(f"Unexpected error in rate request: {str(e)}")
-                raise
+        # Log the request
+        logger.info(f"Mock ShipVox API: Getting rates for request: {rate_request}")
+        
+        # Simulate API latency (between 0.5 and 1.5 seconds)
+        delay = random.uniform(0.5, 1.5)
+        logger.info(f"Simulating API latency: {delay:.2f} seconds")
+        await asyncio.sleep(delay)
+        
+        # Extract request parameters
+        origin_zip = rate_request.get("origin_zip", "00000")
+        destination_zip = rate_request.get("destination_zip", "99999")
+        weight = rate_request.get("weight", 1.0)
+        
+        # Generate mock quotes
+        quotes = self._generate_mock_quotes(origin_zip, destination_zip, weight)
+        
+        # Create response
+        response = {
+            "quotes": quotes,
+            "origin_zip": origin_zip,
+            "destination_zip": destination_zip,
+            "weight": weight,
+            "currency": "USD",
+            "request_id": rate_request.get("requestId", "mock-request-id")
+        }
+        
+        return response
+    
+    def _generate_mock_quotes(self, origin_zip: str, destination_zip: str, weight: float) -> List[Dict[str, Any]]:
+        """Generate mock shipping quotes"""
+        quotes = []
+        
+        # Calculate a base distance factor based on ZIP codes
+        # This is just for simulation purposes
+        distance_factor = abs(int(origin_zip[:1]) - int(destination_zip[:1])) / 10.0 + 0.5
+        
+        # Generate quotes for each carrier and service type
+        for carrier in self.carriers:
+            for service in self.service_types[carrier]:
+                # Calculate a mock rate based on weight and distance
+                base_rate = 5.0 + (weight * 2.0) + (distance_factor * 5.0)
+                
+                # Add carrier/service specific adjustments
+                if carrier == "FedEx":
+                    if service == "Ground":
+                        rate = base_rate * 1.0
+                        transit_days = int(3 + distance_factor * 2)
+                    elif service == "2Day":
+                        rate = base_rate * 1.5
+                        transit_days = 2
+                    else:  # Priority Overnight
+                        rate = base_rate * 2.2
+                        transit_days = 1
+                elif carrier == "UPS":
+                    if service == "Ground":
+                        rate = base_rate * 1.1
+                        transit_days = int(3 + distance_factor * 2)
+                    elif service == "3 Day Select":
+                        rate = base_rate * 1.3
+                        transit_days = 3
+                    elif service == "2nd Day Air":
+                        rate = base_rate * 1.7
+                        transit_days = 2
+                    else:  # Next Day Air
+                        rate = base_rate * 2.3
+                        transit_days = 1
+                elif carrier == "USPS":
+                    if service == "First Class":
+                        # USPS First Class has weight limits
+                        if weight <= 13.0:
+                            rate = base_rate * 0.8
+                            transit_days = int(3 + distance_factor * 2)
+                        else:
+                            # Skip this service for heavy packages
+                            continue
+                    elif service == "Priority Mail":
+                        rate = base_rate * 0.9
+                        transit_days = int(2 + distance_factor)
+                    else:  # Priority Mail Express
+                        rate = base_rate * 1.6
+                        transit_days = 1
+                else:  # DHL
+                    if service == "Express":
+                        rate = base_rate * 2.0
+                        transit_days = 1
+                    elif service == "Ground":
+                        rate = base_rate * 1.1
+                        transit_days = int(4 + distance_factor * 2)
+                    else:  # eCommerce
+                        rate = base_rate * 0.85
+                        transit_days = int(4 + distance_factor * 3)
+                
+                # Add some randomness
+                rate = rate * random.uniform(0.95, 1.05)
+                
+                # Format the rate
+                rate = round(rate, 2)
+                
+                # Add the quote
+                quotes.append({
+                    "carrier": carrier,
+                    "service_name": service,
+                    "cost": rate,
+                    "currency": "USD",
+                    "transit_days": transit_days,
+                    "delivery_date": f"2025-05-{12 + transit_days}",  # Mock date
+                    "package_type": rate_request.get("package_type", "custom_box")
+                })
+        
+        # Sort by cost
+        quotes.sort(key=lambda q: q["cost"])
+        
+        return quotes

@@ -421,56 +421,93 @@ def create_elevenlabs_contextual_update(
 
 async def handle_client_tool_call(message: Dict[str, Any], user_info: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
     """
-    Handle a client_tool_call message from ElevenLabs.
-
+    Handle client tool call messages.
+    
     Args:
-        message: The WebSocket message containing the client_tool_call
+        message: The WebSocket message containing the client tool call
         user_info: Information about the authenticated user
-
+        
     Returns:
-        A response message to be sent back through the WebSocket
+        A tuple of (response, contextual_update) where contextual_update might be None
     """
-    logger.info(f"Handling client_tool_call from user: {user_info.get('username')}")
-
+    logger.info(f"Handling client tool call from user: {user_info.get('username')}")
+    request_id = message.get("requestId", str(uuid.uuid4()))
+    
+    # Extract client tool call details
     try:
-        # Extract the client_tool_call data
-        client_tool_call = message.get("client_tool_call", {})
+        payload = message.get("payload", {})
+        client_tool_call = payload.get("client_tool_call", {})
+        
+        if not client_tool_call:
+            logger.warning("Missing client_tool_call in payload")
+            return {
+                "type": "client_tool_result",
+                "tool_call_id": None,
+                "result": {
+                    "error": "Missing client_tool_call in payload",
+                    "original_request": message
+                },
+                "is_error": True,
+                "timestamp": time.time(),
+                "requestId": request_id
+            }, None
+        
         tool_name = client_tool_call.get("tool_name")
-
-        # Check if we have a handler for this tool
-        if tool_name in tool_handlers:
-            logger.info(f"Processing tool call for: {tool_name}")
-
-            # Call the appropriate handler
-            tool_result, contextual_update = await tool_handlers[tool_name](client_tool_call, user_info)
-
-            # Create a second contextual update specifically for ElevenLabs
-            elevenlabs_update = create_elevenlabs_contextual_update(
-                tool_result=tool_result,
-                tool_name=tool_name,
-                user_info=user_info
-            )
-
-            # Combine the two contextual updates
-            if contextual_update:
-                # Return both updates as a list
-                return tool_result, [contextual_update, elevenlabs_update]
-            else:
-                # Return just the ElevenLabs update
-                return tool_result, elevenlabs_update
+        tool_call_id = client_tool_call.get("tool_call_id", str(uuid.uuid4()))
+        parameters = client_tool_call.get("parameters", {})
+        
+        logger.info(f"Client tool call: tool_name={tool_name}, tool_call_id={tool_call_id}, parameters={parameters}")
+        
+        # Placeholder for actual tool implementation
+        # In a real implementation, this would dispatch to specific tool handlers
+        
+        if tool_name == "hello":
+            response_message = parameters.get("message", "Hello, world!")
+            result = {
+                "message": f"Received: {response_message}",
+                "status": "success"
+            }
         else:
-            logger.warning(f"No handler found for tool: {tool_name}")
-            error_response = create_tool_error_response(
-                tool_call_id=client_tool_call.get("tool_call_id"),
-                error_message=f"Unsupported tool: {tool_name}",
-                original_request=client_tool_call
-            )
-            return error_response, None
+            # Unsupported tool
+            logger.warning(f"Unsupported tool: {tool_name}")
+            result = {
+                "error": f"Unsupported tool: {tool_name}",
+                "original_request": client_tool_call
+            }
+            is_error = True
+            return {
+                "type": "client_tool_result",
+                "tool_call_id": tool_call_id,
+                "result": result,
+                "is_error": is_error,
+                "timestamp": time.time(),
+                "requestId": request_id
+            }, None
+        
+        # Create the response
+        response = {
+            "type": "client_tool_result",
+            "tool_call_id": tool_call_id,
+            "result": result,
+            "is_error": False,
+            "timestamp": time.time(),
+            "requestId": request_id
+        }
+        
+        # No contextual update for this handler
+        return response, None
+        
     except Exception as e:
-        logger.error(f"Error handling client_tool_call: {str(e)}")
-        error_response = create_tool_error_response(
-            tool_call_id=message.get("client_tool_call", {}).get("tool_call_id", "unknown"),
-            error_message=f"Error processing tool call: {str(e)}",
-            original_request=message
-        )
+        logger.error(f"Error handling client tool call: {str(e)}")
+        error_response = {
+            "type": "client_tool_result",
+            "tool_call_id": None,
+            "result": {
+                "error": f"Error processing client tool call: {str(e)}",
+                "original_request": message
+            },
+            "is_error": True,
+            "timestamp": time.time(),
+            "requestId": request_id
+        }
         return error_response, None

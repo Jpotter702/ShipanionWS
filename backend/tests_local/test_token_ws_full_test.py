@@ -2,7 +2,7 @@ import asyncio
 import websockets
 import json
 
-WS_URL = "ws://localhost:10000/ws?token=YOUR_TEST_TOKEN"
+WS_URL = "ws://localhost:8000/ws?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyIn0.dNsYhOKsYlKZzUmOJl8Zpf9SbJ4DJxhd3AU6pO-PWko"
 
 async def test_token_full():
     async with websockets.connect(WS_URL) as ws:

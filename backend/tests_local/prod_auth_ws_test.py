@@ -12,7 +12,7 @@ async def get_jwt_token():
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         resp = await client.post(
             f"{API_URL}/token",
-            data=f"username={USERNAME}&password={PASSWORD}",
+            data={"username": USERNAME, "password": PASSWORD},
             headers=headers,
         )
         resp.raise_for_status()

@@ -10,6 +10,13 @@ import uuid
 from typing import Dict, Any, List, Callable, Tuple, Optional
 from .shipvox_client import ShipVoxClient
 from .elevenlabs_handler import handle_client_tool_call
+from .ui_handlers import (
+    handle_contextual_update,
+    handle_ui_navigation,
+    handle_notification,
+    handle_get_shipping_quotes,
+    handle_create_label
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -104,10 +111,33 @@ async def handle_rate_request(message: Dict[str, Any], user_info: Dict[str, Any]
         }
         return error_response, None
 
+async def handle_ping(message: Dict[str, Any], user_info: Dict[str, Any]) -> Tuple[Dict[str, Any], None]:
+    """
+    Handle a ping message and return a pong response.
+    """
+    response = {
+        "type": "pong",
+        "payload": {"message": "pong"},
+        "timestamp": time.time(),
+        "requestId": message.get("requestId", str(uuid.uuid4())),
+        "user": user_info.get("username")
+    }
+    return response, None
+
 # Message type to handler mapping
 message_handlers: Dict[str, Callable] = {
     "get_rates": handle_rate_request,
     "client_tool_call": handle_client_tool_call,
+    "ping": handle_ping,
+    "contextual_update": handle_contextual_update,
+    "navigate": handle_ui_navigation,
+    "notification": handle_notification,
+}
+
+# Register UI tool name handlers
+ui_tool_handlers: Dict[str, Callable] = {
+    "get_shipping_quotes": handle_get_shipping_quotes,
+    "create_label": handle_create_label,
 }
 
 async def dispatch_message(message: Dict[str, Any], user_info: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
@@ -125,6 +155,17 @@ async def dispatch_message(message: Dict[str, Any], user_info: Dict[str, Any]) -
 
     if message_type in message_handlers:
         logger.info(f"Dispatching message of type: {message_type}")
+        
+        # Special handling for client_tool_call to use the tool name-specific handlers
+        if message_type == "client_tool_call":
+            # Extract the tool name
+            tool_call = message.get("payload", {}).get("client_tool_call", {})
+            tool_name = tool_call.get("tool_name")
+            
+            if tool_name in ui_tool_handlers:
+                logger.info(f"Dispatching UI tool call for: {tool_name}")
+                return await ui_tool_handlers[tool_name](message, user_info)
+        
         return await message_handlers[message_type](message, user_info)
     else:
         logger.warning(f"No handler found for message type: {message_type}")

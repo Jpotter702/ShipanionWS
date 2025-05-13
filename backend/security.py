@@ -21,13 +21,14 @@ fake_users_db = {
     "user": {
         "username": "user",
         # Hashed password for "password"
-        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
+        "hashed_password": "$2b$12$kTpyJ/FFeNCnxTnmneEOIOZnLxjvvSpLLyTkKt0WIV5SDCeoOlnpO",
     }
 }
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    result = pwd_context.verify(plain_password, hashed_password)
+    print(f"DEBUG: verify_password called with plain_password='{plain_password}', hashed_password='{hashed_password}', result={result}")
+    return result
 
 def get_password_hash(password: str) -> str:
     """Generate a password hash."""
@@ -35,12 +36,18 @@ def get_password_hash(password: str) -> str:
 
 def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
     """Authenticate a user by username and password."""
+    print(f"DEBUG: authenticate_user called with username='{username}', password='{password}'")
     user = fake_users_db.get(username)
+    print(f"DEBUG: user found: {user}")
     if not user:
+        print("DEBUG: No such user.")
         return None
     if not verify_password(password, user["hashed_password"]):
+        print("DEBUG: Password verification failed.")
         return None
+    print("DEBUG: Authentication successful.")
     return user
+
 
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
     """Create a new JWT access token."""

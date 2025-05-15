@@ -1,130 +1,181 @@
-# ShipanionWS (WebSocket Server)
+# Shipanion WebSocket Demo
 
-Real-time communication layer for the Shipanion platform.
+This repository contains a demonstration of real-time WebSocket communication between the Shipanion backend and UI components.
 
 ## Overview
 
-ShipanionWS serves as the communication bridge between the frontend (ShipanionUI) and middleware (ShipanionMW), enabling real-time updates and voice interactions. It provides:
+The demo showcases how WebSocket messages can control UI components in real-time, specifically for a shipping application workflow:
 
-- WebSocket server for real-time updates
-- ElevenLabs voice integration
-- Session management
-- Event-based communication between UI and middleware
-- Authentication via JWT
+1. **Backend (ShipanionWS)**: Sends WebSocket messages with shipping updates
+2. **Frontend (ShipanionUI)**: Displays and reacts to these messages in real-time
 
 ## Features
 
-### WebSocket Communication
+- Real-time UI updates via WebSocket
+- Shipping workflow demonstration (details, quotes, payment, label)
+- Step-by-step visualization with Stepper Accordion
+- Performance optimized with throttling and debouncing
 
-The WebSocket server handles real-time communication between the frontend and middleware, allowing for:
+## Prerequisites
 
-- Real-time shipping rate updates
-- Label creation notifications
-- Session tracking across devices
-- Voice agent integration
+- Python 3.12+
+- Node.js 18+ and npm/yarn
+- Git
 
-### ElevenLabs Integration
+## Installation
 
-The server integrates with ElevenLabs Conversational AI, providing:
-
-- Client tool calls for shipping quotes and label creation
-- Contextual updates for UI based on tool call results
-- Parallel WebSocket connections for tool results and UI updates
-
-### REST/Internal Call Toggle
-
-The server includes a toggle (`USE_INTERNAL`) that controls how shipping-related functionality is accessed:
-
-- When `USE_INTERNAL = False` (default): The server makes HTTP requests to the ShipVox API endpoints.
-- When `USE_INTERNAL = True`: The server calls internal functions directly from the backend service module.
-
-This toggle facilitates the transition after the backend merge, allowing for easy switching between the two modes of operation.
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.8+
-- pip (Python package manager)
-- Virtual environment (recommended)
-
-### Installation
-
-1. Clone the repository:
+### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/Shipanion.git
-cd Shipanion/ShipanionWS
+git clone https://github.com/your-org/Shipanion.git
+cd Shipanion
 ```
 
-2. Create and activate a virtual environment:
+### 2. Backend Setup (ShipanionWS)
+
+Create and activate a virtual environment:
 
 ```bash
+cd ShipanionWS
+
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
 ```
 
-3. Install dependencies:
+Install the required packages:
 
 ```bash
 pip install -r requirements.txt
+
+# If uvicorn is missing, install it explicitly
+pip install uvicorn
 ```
 
-### Configuration
-
-Create a `.env` file in the root directory with the following settings:
-
-```
-# API settings
-SHIPVOX_API_URL=http://localhost:8000/api
-
-# Authentication settings
-SECRET_KEY=your-secret-key-here
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-# WebSocket settings
-ALLOWED_ORIGINS=http://localhost:3000
-
-# Debug settings
-DEBUG=True
-
-# Toggle for using internal function calls vs REST API
-USE_INTERNAL=False
-```
-
-### Running the Server
-
-Start the WebSocket server:
+### 3. Frontend Setup (ShipanionUI)
 
 ```bash
-uvicorn backend.main:app --reload --port 8000
+cd ../ShipanionUI
+
+# Install dependencies
+npm install
+# or
+yarn install
 ```
 
-The server will be available at:
-- HTTP: http://localhost:8000
-- WebSocket: ws://localhost:8000/ws
+## Running the Demo
 
-## Documentation
+### 1. Start the WebSocket Backend
 
-For more detailed information, see the following documentation:
-
-- [TOGGLE_GUIDE.md](../docs/ShipanionWS/TOGGLE_GUIDE.md): Guide for using the REST/internal call toggle
-- [ELEVENLABS_INTEGRATION_GUIDE.md](../docs/ShipanionWS/ELEVENLABS_INTEGRATION_GUIDE.md): Guide for integrating with ElevenLabs
-- [ERROR_HANDLING_GUIDE.md](../docs/ShipanionWS/ERROR_HANDLING_GUIDE.md): Guide for error handling
-- [TIMEOUT_HANDLING_GUIDE.md](../docs/ShipanionWS/TIMEOUT_HANDLING_GUIDE.md): Guide for timeout handling
-- [TEST_TOKEN_GUIDE.md](../docs/ShipanionWS/TEST_TOKEN_GUIDE.md): Guide for using the test token
-
-## Testing
-
-Run the tests:
+In one terminal, navigate to the ShipanionWS directory and run:
 
 ```bash
-# Run all tests
-pytest
-
-# Run specific test file
-pytest tests/sprint3/test_internal_toggle.py
-
-# Run tests with USE_INTERNAL=True
-USE_INTERNAL=true pytest tests/sprint3/test_internal_toggle.py
+# Make sure your virtual environment is activated
+python -m uvicorn backend.main:app --reload --port 8001
 ```
+
+You should see output indicating the server is running on http://127.0.0.1:8001.
+
+### 2. Start the Frontend Development Server
+
+In another terminal, navigate to the ShipanionUI directory and run:
+
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+This will start the Next.js development server, typically on http://localhost:3000.
+
+### 3. Access the WebSocket Demo Page
+
+Open your browser and navigate to:
+
+- Basic WebSocket demo: http://localhost:3000/ws-demo
+- Full Shipping WebSocket demo: http://localhost:3000/shipping-ws-demo
+
+### 4. Run the WebSocket Demo Script
+
+In a third terminal, navigate to the ShipanionWS directory and run:
+
+```bash
+# Make sure your virtual environment is activated
+python ws_ui_demo.py
+```
+
+For improved debugging, you can use the fixed version:
+
+```bash
+python fixed_ws_ui_demo.py
+```
+
+## Demo Workflow
+
+The demo script will send a series of WebSocket messages in sequence:
+
+1. **ZIP code collection**: Origin and destination ZIP codes
+2. **Weight confirmation**: Package weight
+3. **Shipping quotes**: Available carriers and rates
+4. **Notification**: A success notification
+5. **Label creation**: Shipping label with tracking number
+
+## Troubleshooting
+
+### WebSocket Connection Issues
+
+- Ensure the WebSocket server is running on port 8001
+- Check browser console for connection errors
+- Verify that the `NEXT_PUBLIC_WEBSOCKET_URL` is set correctly (defaults to `ws://localhost:8001/ws`)
+
+### High CPU Usage
+
+If you experience high CPU usage:
+
+1. Stop any running instances of the demo
+2. Restart your browser
+3. Use the optimized version of the code which includes:
+   - Throttled message processing
+   - Limited WebSocket message history
+   - Proper cleanup of event listeners
+
+### Python Module Not Found
+
+If you get "No module named 'uvicorn'" or other module errors:
+
+```bash
+pip install uvicorn fastapi websockets python-jose[cryptography] python-multipart
+```
+
+## Architecture
+
+The demo consists of these main components:
+
+1. **WebSocket Backend (`backend/main.py`)**: FastAPI server with WebSocket endpoint
+2. **Demo Script (`ws_ui_demo.py`)**: Sends messages to simulate a shipping workflow
+3. **WebSocket Hook (`hooks/use-web-socket.ts`)**: React hook for WebSocket communication
+4. **Shipping Context (`contexts/shipping-context.tsx`)**: React context for shipping state
+5. **Demo UI Components**: React components that display shipping workflow
+
+## Performance Optimizations
+
+To prevent high CPU usage and browser crashes, the following optimizations have been implemented:
+
+1. **Throttled Message Processing**: Limits WebSocket message processing rate
+2. **Debounced State Updates**: Batches rapid state changes
+3. **Memoized Components**: Prevents unnecessary re-renders
+4. **Controlled Message History**: Limits stored message history
+5. **Proper Resource Cleanup**: Ensures WebSocket connections and timers are properly cleaned up
+
+## License
+
+[Your License Here]
+
+## Contributors
+
+[Your Contributors Here]
